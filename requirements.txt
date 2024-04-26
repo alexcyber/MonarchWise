@@ -1,0 +1,3 @@
+monarchmoney
+splitwise
+python-dotenv
