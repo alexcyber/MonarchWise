@@ -14,14 +14,17 @@ SPLITWISE_API_KEY = os.environ['SPLITWISE_API_KEY']
 MONARCH_EMAIL = os.environ['MONARCH_EMAIL']
 MONARCH_PASSWORD = os.environ['MONARCH_PASSWORD']
 
-s = SplitwiseClient(SPLITWISE_KEY, SPLITWISE_SECRET, SPLITWISE_API_KEY)
 
+async def main():  
+    s = SplitwiseClient(SPLITWISE_KEY, SPLITWISE_SECRET, SPLITWISE_API_KEY)
+    print(json.dumps(s.get_expenses(), indent=4))
+    # m = MonarchClient(MONARCH_EMAIL, MONARCH_PASSWORD)
+    # await m.login()
 
-# async def main():
-#     m = MonarchClient(MONARCH_EMAIL, MONARCH_PASSWORD)
-#     await m.login()
+    # categories = (await m.client.get_transaction_categories())['categories']
+    # reimbursements_category_id = next((c for c in categories if c['name'] == 'Reimbursements'))['id']
+    # print(reimbursements_category_id)
+    # txns = (await m.client.get_transactions())
+    # print(json.dumps(txns, indent=4))
 
-#     txns = (await m.client.get_transactions())
-#     # print(json.dumps(txns, indent=4))
-
-# asyncio.run(main())
+asyncio.run(main())
