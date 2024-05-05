@@ -1,6 +1,5 @@
 from monarchmoney import MonarchMoney
 import json
-import copy
 
 
 class MonarchClient(object):
@@ -20,26 +19,19 @@ class MonarchClient(object):
     async def find_matches(self, splitwise_expenses):
         txns = []
         offset = 0
-        batch_size = 200
+        batch_size = 400
         total_transactions = float('inf')
 
         while True:
             if offset > total_transactions:
                 break
 
-            print(
-                f'fetching {batch_size} transactions starting from offset {offset}')
             response = await self.client.get_transactions(limit=batch_size, offset=offset)
             txns += response['allTransactions']['results']
 
             offset += batch_size
             total_transactions = response['allTransactions']['totalCount']
 
-        with open('mm.json', 'w') as f:
-            f.write(json.dumps(txns, indent=4))
-
-        print(splitwise_expenses.keys())
-        txns_to_split = []
         for txn in txns:
             if txn['isSplitTransaction']:
                 continue
@@ -47,9 +39,6 @@ class MonarchClient(object):
             amount = -1 * txn['amount']
             if amount in splitwise_expenses.keys():
                 splitwise_expense = splitwise_expenses[amount]
-                print('Found', splitwise_expense)
-                print(json.dumps(txn, indent=2))
-                # del splitwise_expenses[amount]
 
                 monarch_id = txn['id']
                 monarch_merchant = txn['merchant']['name']
