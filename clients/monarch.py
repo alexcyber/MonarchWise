@@ -69,7 +69,8 @@ class MonarchClient(object):
                     }
                 ]
 
-                print(f'Splitting transaction for {monarch_merchant} into ${reimbursement} reimbursed and {amount - reimbursement} for {txn["category"]["name"]}')
+                print(
+                    f'Splitting transaction for {monarch_merchant} into ${reimbursement} reimbursed and {amount - reimbursement} for {txn["category"]["name"]}')
                 print('Confirm? Y/N')
-                if(input().lower() == 'y'):
+                if (input().lower() == 'y'):
                     print(await self.client.update_transaction_splits(monarch_id, split_data))
