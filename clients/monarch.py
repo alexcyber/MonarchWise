@@ -1,6 +1,8 @@
 from monarchmoney import MonarchMoney
 import json
+import hashlib
 
+EXCLUDED_TRANSACTIONS_PATH = 'excluded.json'
 
 class MonarchClient(object):
     @classmethod
@@ -22,6 +24,9 @@ class MonarchClient(object):
         batch_size = 400
         total_transactions = float('inf')
 
+        with open(EXCLUDED_TRANSACTIONS_PATH, 'r') as f:
+            excluded = json.load(f)
+
         while True:
             if offset > total_transactions:
                 break
@@ -41,25 +46,39 @@ class MonarchClient(object):
                 splitwise_expense = splitwise_expenses[amount]
 
                 monarch_id = txn['id']
-                monarch_merchant = txn['merchant']['name']
-                original_category = txn['category']['id']
-                reimbursement = splitwise_expense['amount_reimbursed']
+                txn_hash = hashlib.sha256(monarch_id.encode('utf-8')).hexdigest()
 
-                split_data = [
-                    {
-                        'merchantName': monarch_merchant,
-                        'amount': -1 * (amount - reimbursement),
-                        'categoryId': original_category
-                    },
-                    {
-                        'merchantName': monarch_merchant,
-                        'amount': -1 * (reimbursement),
-                        'categoryId': self.reimbursements_category_id
-                    }
-                ]
+                if txn_hash not in excluded:
+                    monarch_merchant = txn['merchant']['name']
+                    original_category = txn['category']['id']
+                    reimbursement = splitwise_expense['amount_reimbursed']
 
-                print(
-                    f'Splitting transaction for {monarch_merchant} into ${reimbursement} reimbursed and {amount - reimbursement} for {txn["category"]["name"]}')
-                print('Confirm? Y/N')
-                if (input().lower() == 'y'):
-                    print(await self.client.update_transaction_splits(monarch_id, split_data))
+                    split_data = [
+                        {
+                            'merchantName': monarch_merchant,
+                            'amount': -1 * (amount - reimbursement),
+                            'categoryId': original_category
+                        },
+                        {
+                            'merchantName': monarch_merchant,
+                            'amount': -1 * (reimbursement),
+                            'categoryId': self.reimbursements_category_id
+                        }
+                    ]
+
+                    print(
+                        f'Splitting transaction for {monarch_merchant} into ${reimbursement} reimbursed and {amount - reimbursement} for {txn["category"]["name"]}')
+                    print('Confirm? Y/N')
+                    valid_response = False
+                    while not valid_response:
+                        response = input()
+                        if response.lower() == 'y':
+                            valid_response = True
+                            print(await self.client.update_transaction_splits(monarch_id, split_data))
+                        elif response.lower() == 'n':
+                            valid_response = True
+                            print('Transaction has been marked as excluded.')
+                            excluded.append(txn_hash)
+                    
+        with open(EXCLUDED_TRANSACTIONS_PATH, 'w') as f:
+            json.dump(excluded, f, indent=4)                 
