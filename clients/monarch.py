@@ -4,6 +4,7 @@ import hashlib
 
 EXCLUDED_TRANSACTIONS_PATH = 'excluded.json'
 
+
 class MonarchClient(object):
     @classmethod
     async def create(cls, email, password):
@@ -46,7 +47,8 @@ class MonarchClient(object):
                 splitwise_expense = splitwise_expenses[amount]
 
                 monarch_id = txn['id']
-                txn_hash = hashlib.sha256(monarch_id.encode('utf-8')).hexdigest()
+                txn_hash = hashlib.sha256(
+                    monarch_id.encode('utf-8')).hexdigest()
 
                 if txn_hash not in excluded:
                     monarch_merchant = txn['merchant']['name']
@@ -57,17 +59,19 @@ class MonarchClient(object):
                         {
                             'merchantName': monarch_merchant,
                             'amount': -1 * (amount - reimbursement),
-                            'categoryId': original_category
+                            'categoryId': original_category,
+                            'notes': splitwise_expense['description']
                         },
                         {
                             'merchantName': monarch_merchant,
                             'amount': -1 * (reimbursement),
-                            'categoryId': self.reimbursements_category_id
+                            'categoryId': self.reimbursements_category_id,
+                            'notes': splitwise_expense['description']
                         }
                     ]
 
                     print(
-                        f'Splitting transaction for {monarch_merchant} into ${reimbursement} reimbursed and {amount - reimbursement} for {txn["category"]["name"]}')
+                        f'Splitting transaction for {monarch_merchant} ({splitwise_expense["description"]}) into ${reimbursement} reimbursed and {amount - reimbursement} for {txn["category"]["name"]}')
                     print('Confirm? Y/N')
                     valid_response = False
                     while not valid_response:
@@ -79,6 +83,6 @@ class MonarchClient(object):
                             valid_response = True
                             print('Transaction has been marked as excluded.')
                             excluded.append(txn_hash)
-                    
+
         with open(EXCLUDED_TRANSACTIONS_PATH, 'w') as f:
-            json.dump(excluded, f, indent=4)                 
+            json.dump(excluded, f, indent=4)
