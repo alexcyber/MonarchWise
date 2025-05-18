@@ -8,6 +8,7 @@ from functools import lru_cache
 class SplitwiseClient:
     def __init__(self, key, secret, api_key):
         self.client = Splitwise(key, secret, api_key=api_key)
+        self.client.getExpenses
         self.clientUserId = self.client.getCurrentUser().getId()
 
     @lru_cache
@@ -17,8 +18,14 @@ class SplitwiseClient:
         return f'{user.first_name}{f" {user.last_name}" if user.last_name else ""}'
 
     def get_expenses(self):
-        expenses_data = self.client.getExpenses()
-        expenses = {}
+        expenses_data = []
+        offset = 0
+        while True:
+            page = self.client.getExpenses(limit=100, offset=offset)
+            if not page:
+                break
+            expenses_data.extend(page)
+            offset += 100
 
         for expense in expenses_data:
             dt = datetime.datetime.strptime(expense.date, "%Y-%m-%dT%H:%M:%SZ")
