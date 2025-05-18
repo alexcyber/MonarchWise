@@ -1,24 +1,51 @@
 from monarchmoney import MonarchMoney
 import json
 import hashlib
+import os
 
 EXCLUDED_TRANSACTIONS_PATH = 'excluded.json'
 
 
 class MonarchClient(object):
     @classmethod
-    async def create(cls, email, password):
+    async def create(cls, email, password, uuid):
         self = cls()
         self.client = MonarchMoney()
         self.email = email
         self.password = password
-
-        await self.client.login(self.email, self.password)
+        self.uuid = uuid
+        self.client = await self.login(self.client, {'username': email, 'password': password}, uuid)
         self.categories = (await self.client.get_transaction_categories())['categories']
         self.reimbursements_category_id = next(
             (c for c in self.categories if c['name'] == 'Reimbursements'))['id']
         return self
 
+    async def login(self, mm, credentials, uuid):
+        mm._headers['Device-UUID'] = uuid # See https://github.com/hammem/monarchmoney/issues/137 for additional information
+        try:
+            mm.load_session()
+            # Immediately test if session is valid
+            try:
+                await mm.get_accounts()
+                return mm
+            except Exception:
+                raise ValueError("Invalid session, need to re-login.")
+        except FileNotFoundError:
+            os.makedirs(".mm", exist_ok=True)
+        except Exception:
+            if os.path.exists(".mm/mm_session.pickle"):
+                os.remove(".mm/mm_session.pickle")
+            del mm._headers["Authorization"]
+            
+        await mm.login(
+            email=credentials['username'],
+            password=credentials['password'],
+            save_session=True,
+            use_saved_session=False
+        )
+
+        return mm
+    
     async def find_matches(self, splitwise_expenses):
         txns = []
         offset = 0
